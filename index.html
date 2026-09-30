@@ -1,1229 +1,212 @@
 <!DOCTYPE html>
-<html lang="ja" class="h-full bg-slate-50">
+<html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ボタニカルログ - 生育管理 & 観察日記</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts (Inter & Noto Sans JP) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- Chart.js for plant growth visual analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        emerald: {
-                            50: '#ecfdf5',
-                            100: '#d1fae5',
-                            500: '#10b981',
-                            600: '#059669',
-                            700: '#047857',
-                            800: '#065f46',
-                            900: '#064e3b',
-                        },
-                        sage: {
-                            50: '#f4f7f4',
-                            100: '#e3eae3',
-                            500: '#739072',
-                            600: '#4F6F52',
-                            700: '#3A4D39',
-                            800: '#2A3629',
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'Noto Sans JP', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-
-    <style>
-        body {
-            font-family: 'Inter', 'Noto Sans JP', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-            animation: fadeIn 0.25s ease-out forwards;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>タスク管理アプリ</title>
+  <!-- Tailwind CSS (デザイン用) -->
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="h-full flex flex-col text-slate-800 bg-slate-50 antialiased selection:bg-emerald-200 selection:text-emerald-900">
+<body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col items-center p-4 sm:p-8">
 
-    <!-- Top Navigation Header -->
-    <header class="sticky top-0 z-30 glass-panel border-b border-emerald-100 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <!-- App Logo / Title -->
-                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('plants')">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-md shadow-emerald-600/20">
-                        <i class="fa-solid font-bold fa-seedling text-lg"></i>
-                    </div>
-                    <div>
-                        <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-emerald-800 to-teal-700 bg-clip-text text-transparent">ボタニカルログ</span>
-                        <span class="hidden sm:inline-block text-xs text-emerald-600 font-medium ml-2 px-2 py-0.5 bg-emerald-50 rounded-full border border-emerald-200">生育管理</span>
-                    </div>
-                </div>
-
-                <!-- Right Side Profile / Controls -->
-                <div class="flex items-center space-x-3">
-                    <!-- Firebase Config Quick Modal Toggle -->
-                    <button id="btn-config-modal" onclick="openConfigModal()" title="Firebase設定" class="p-2.5 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition">
-                        <i class="fa-solid fa-gear text-lg"></i>
-                    </button>
-
-                    <!-- User Profile / Auth Button -->
-                    <div id="auth-header-container">
-                        <!-- Rendered by JS based on login state -->
-                        <div class="animate-pulse flex items-center space-x-2">
-                            <div class="w-8 h-8 bg-slate-200 rounded-full"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content Container -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
-        <!-- UNAUTHENTICATED VIEW (WELCOME / LANDING) -->
-        <section id="welcome-view" class="hidden min-h-[75vh] flex flex-col items-center justify-center text-center py-12">
-            <div class="relative mb-8">
-                <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
-                    <i class="fa-solid fa-plant-wilt text-5xl sm:text-6xl"></i>
-                </div>
-                <div class="absolute -bottom-2 -right-2 w-10 h-10 bg-teal-500 rounded-full flex items-center justify-center text-white shadow-lg">
-                    <i class="fa-solid fa-droplet text-sm"></i>
-                </div>
-            </div>
-
-            <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight max-w-2xl">
-                育てる歓びを、もっと身近に。<br>
-                <span class="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">植物の手入れと成長の日記帳</span>
-            </h1>
-            <p class="mt-4 text-base sm:text-lg text-slate-600 max-w-xl">
-                観葉植物・野菜・多肉植物・花々の日々の水やり、肥料、草丈の記録から過去の写真アルバムまで。クラウドで一括管理しましょう。
-            </p>
-
-            <div class="mt-8 flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-                <button id="btn-google-login-welcome" onclick="handleGoogleSignIn()" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3.5 border border-slate-300 rounded-xl shadow-sm text-base font-medium text-slate-700 bg-white hover:bg-slate-50 transition active:scale-95">
-                    <svg class="w-5 h-5 mr-3" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                    </svg>
-                    Googleでログインして始める
-                </button>
-                <button onclick="enableDemoMode()" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3.5 border border-emerald-200 rounded-xl text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-medium transition">
-                    <i class="fa-solid fa-flask mr-2"></i>デモモードで試す
-                </button>
-            </div>
-
-            <!-- Features list -->
-            <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 text-left max-w-4xl w-full">
-                <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                    <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3">
-                        <i class="fa-solid fa-calendar-check"></i>
-                    </div>
-                    <h3 class="font-bold text-slate-800">お手入れリマインダー</h3>
-                    <p class="text-xs text-slate-500 mt-1">水やりや肥料を最後にあげた日からの経過日数を自動計算して通知。</p>
-                </div>
-                <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                    <div class="w-10 h-10 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center mb-3">
-                        <i class="fa-solid fa-images"></i>
-                    </div>
-                    <h3 class="font-bold text-slate-800">写真付き観察ログ</h3>
-                    <p class="text-xs text-slate-500 mt-1">成長の様子を画像とメモでタイムライン保存。過去の姿と見比べる楽しさ。</p>
-                </div>
-                <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                    <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3">
-                        <i class="fa-solid fa-cloud"></i>
-                    </div>
-                    <h3 class="font-bold text-slate-800">Firestoreクラウド同期</h3>
-                    <p class="text-xs text-slate-500 mt-1">データはGoogleアカウントにリアルタイム保存。どのスマホ・PCからでも閲覧可能。</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- AUTHENTICATED MAIN DASHBOARD VIEW -->
-        <section id="app-dashboard-view" class="hidden">
-            <!-- Navigation Tabs & Actions Bar -->
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-200">
-                <nav class="flex space-x-2 bg-slate-200/70 p-1.5 rounded-2xl w-full md:w-auto overflow-x-auto hide-scrollbar">
-                    <button id="tab-btn-plants" onclick="switchTab('plants')" class="tab-btn flex-1 md:flex-initial px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center space-x-2 bg-white text-emerald-800 shadow-sm">
-                        <i class="fa-solid fa-leaf text-emerald-600"></i>
-                        <span>マイ植物</span>
-                        <span id="badge-plant-count" class="ml-1.5 px-2 py-0.5 text-xs bg-emerald-100 text-emerald-800 rounded-full">0</span>
-                    </button>
-                    <button id="tab-btn-timeline" onclick="switchTab('timeline')" class="tab-btn flex-1 md:flex-initial px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center space-x-2 text-slate-600 hover:text-slate-900">
-                        <i class="fa-solid fa-book-open"></i>
-                        <span>観察タイムライン</span>
-                    </button>
-                    <button id="tab-btn-schedule" onclick="switchTab('schedule')" class="tab-btn flex-1 md:flex-initial px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center space-x-2 text-slate-600 hover:text-slate-900">
-                        <i class="fa-solid fa-droplet"></i>
-                        <span>お手入れリマインド</span>
-                    </button>
-                </nav>
-
-                <div class="flex items-center space-x-3">
-                    <button onclick="openPlantModal()" class="w-full md:w-auto inline-flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold rounded-xl shadow-md shadow-emerald-600/20 transition active:scale-95">
-                        <i class="fa-solid fa-plus mr-2"></i>植物を登録する
-                    </button>
-                </div>
-            </div>
-
-            <!-- TAB 1: MY PLANTS VIEW -->
-            <div id="tab-content-plants" class="tab-content py-6 animate-fade-in">
-                <!-- Filter Bar -->
-                <div class="flex flex-col sm:flex-row gap-3 mb-6">
-                    <div class="relative flex-1">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400"></i>
-                        <input type="text" id="plant-search-input" oninput="renderPlants()" placeholder="名前や品種で検索..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    </div>
-                    <select id="plant-location-filter" onchange="renderPlants()" class="bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                        <option value="ALL">全ての場所</option>
-                        <option value="室内">室内 / リビング</option>
-                        <option value="ベランダ">ベランダ / バルコニー</option>
-                        <option value="庭/屋外">お庭 / 屋外</option>
-                        <option value="畑">畑 / 菜園</option>
-                    </select>
-                </div>
-
-                <!-- Plants Grid Container -->
-                <div id="plants-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Cards will be dynamically injected here -->
-                </div>
-
-                <!-- Empty State -->
-                <div id="plants-empty-state" class="hidden text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300">
-                    <div class="w-16 h-16 mx-auto rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mb-4 text-2xl">
-                        <i class="fa-solid fa-seedling"></i>
-                    </div>
-                    <h3 class="text-lg font-bold text-slate-800">植物が登録されていません</h3>
-                    <p class="text-slate-500 text-sm mt-1 max-w-sm mx-auto">「植物を登録する」ボタンから、育てているお気に入りの観葉植物や作物を追加してみましょう！</p>
-                    <button onclick="openPlantModal()" class="mt-5 inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition">
-                        <i class="fa-solid fa-plus mr-2"></i>最初の1株を追加
-                    </button>
-                </div>
-            </div>
-
-            <!-- TAB 2: TIMELINE LOGS VIEW -->
-            <div id="tab-content-timeline" class="tab-content hidden py-6 animate-fade-in">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                    <div>
-                        <h2 class="text-xl font-bold text-slate-800">成長・観察アルバム</h2>
-                        <p class="text-xs text-slate-500">日々の手入れや成長の軌跡をタイムラインでチェックできます。</p>
-                    </div>
-                    <div class="flex items-center space-x-3 w-full md:w-auto">
-                        <select id="timeline-plant-filter" onchange="renderTimeline()" class="bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-700 flex-grow md:flex-grow-0">
-                            <option value="ALL">すべての植物のログ</option>
-                        </select>
-                        <button onclick="openLogModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-sm transition flex items-center whitespace-nowrap shadow-sm">
-                            <i class="fa-solid fa-pen-to-square mr-2"></i>日記を書く
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Growth Graph Section -->
-                <div class="mb-8 p-5 bg-white rounded-2xl border border-slate-200 shadow-sm">
-                    <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center">
-                        <i class="fa-solid fa-chart-line text-emerald-600 mr-2"></i>草丈・サイズの推移 (cm)
-                    </h3>
-                    <div class="h-48 w-full">
-                        <canvas id="growthChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Timeline Items list -->
-                <div id="timeline-list" class="relative pl-6 sm:pl-8 border-l-2 border-emerald-200 space-y-8">
-                    <!-- Dynamic timeline logs injected here -->
-                </div>
-
-                <div id="timeline-empty-state" class="hidden text-center py-12 bg-white rounded-2xl border border-slate-200">
-                    <i class="fa-solid fa-book-open text-slate-300 text-4xl mb-3"></i>
-                    <p class="text-slate-500 text-sm">観察日記の記録がありません。「日記を書く」から手入れや成長記録を投稿してみましょう。</p>
-                </div>
-            </div>
-
-            <!-- TAB 3: SCHEDULE / REMINDERS VIEW -->
-            <div id="tab-content-schedule" class="tab-content hidden py-6 animate-fade-in">
-                <div class="mb-6">
-                    <h2 class="text-xl font-bold text-slate-800">お手入れステータス & リマインダー</h2>
-                    <p class="text-xs text-slate-500">水やりや肥料を最後にあげてからの日数を一覧で確認し、忘れないように管理します。</p>
-                </div>
-
-                <div id="schedule-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    <!-- Reminders rendered here -->
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- MODAL 1: ADD / EDIT PLANT -->
-    <div id="plant-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all my-8">
-            <div class="px-6 py-4 bg-gradient-to-r from-emerald-700 to-teal-700 text-white flex justify-between items-center">
-                <h3 id="plant-modal-title" class="font-bold text-lg">新しい植物を登録</h3>
-                <button onclick="closePlantModal()" class="text-white/80 hover:text-white p-1 text-xl"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <form id="plant-form" onsubmit="savePlant(event)" class="p-6 space-y-4">
-                <input type="hidden" id="plant-id-input">
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">植物の名前 / 愛称 <span class="text-rose-500">*</span></label>
-                    <input type="text" id="plant-name" required placeholder="例: パキラのパキちゃん, ミニトマト" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">品種 / カテゴリ</label>
-                        <input type="text" id="plant-species" placeholder="例: 観葉植物, 塊根植物" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">栽培場所</label>
-                        <select id="plant-location" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                            <option value="室内">室内 / リビング</option>
-                            <option value="ベランダ">ベランダ / バルコニー</option>
-                            <option value="庭/屋外">お庭 / 屋外</option>
-                            <option value="畑">畑 / 菜園</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">栽培開始日 / 植え付け日</label>
-                        <input type="date" id="plant-start-date" required class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">水やり頻度の目安(日)</label>
-                        <input type="number" id="plant-water-interval" value="3" min="1" max="60" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">カバー画像URL (空欄なら自動設定)</label>
-                    <input type="url" id="plant-image-url" placeholder="https://images.unsplash.com/..." class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    <p class="text-[11px] text-slate-400 mt-1">※Unsplash等の公開画像URLが利用できます。</p>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">メモ・育て方のコツ</label>
-                    <textarea id="plant-memo" rows="2" placeholder="例: 直射日光を避けて明るい日陰に置く。土が乾いたらたっぷり給水。" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
-                </div>
-                <div class="pt-3 flex justify-end space-x-3 border-t border-slate-100">
-                    <button type="button" onclick="closePlantModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50">キャンセル</button>
-                    <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-md transition">保存する</button>
-                </div>
-            </form>
-        </div>
+  <div class="w-full max-w-md bg-white rounded-xl shadow-md p-6 space-y-6">
+    <!-- ヘッダー / ユーザー情報 -->
+    <div class="flex justify-between items-center border-b pb-4">
+      <h1 class="text-xl font-bold text-slate-900">Task Manager</h1>
+      <div id="userInfo" class="hidden flex items-center gap-2">
+        <img id="userAvatar" class="w-8 h-8 rounded-full" src="" alt="Avatar">
+        <button id="logoutBtn" class="text-xs bg-slate-200 hover:bg-slate-300 px-2.5 py-1.5 rounded transition">ログアウト</button>
+      </div>
     </div>
 
-    <!-- MODAL 2: ADD OBSERVATION LOG -->
-    <div id="log-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all my-8">
-            <div class="px-6 py-4 bg-gradient-to-r from-emerald-700 to-teal-700 text-white flex justify-between items-center">
-                <h3 class="font-bold text-lg"><i class="fa-solid fa-pen-to-square mr-2"></i>観察・手入れ記録の投稿</h3>
-                <button onclick="closeLogModal()" class="text-white/80 hover:text-white p-1 text-xl"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <form id="log-form" onsubmit="saveLog(event)" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">対象の植物 <span class="text-rose-500">*</span></label>
-                    <select id="log-plant-id" required class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                        <!-- Options generated dynamically -->
-                    </select>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">記録日</label>
-                        <input type="date" id="log-date" required class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">現在の草丈 / 高さ(cm)</label>
-                        <input type="number" step="0.1" id="log-height" placeholder="例: 15.5" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
-                    </div>
-                </div>
-
-                <!-- Care Actions Checklist -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-2">本日実施したお手入れ</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <label class="flex items-center p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium cursor-pointer hover:bg-emerald-50">
-                            <input type="checkbox" id="log-care-water" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 mr-2">
-                            <span><i class="fa-solid fa-droplet text-blue-500 mr-1"></i>水やり</span>
-                        </label>
-                        <label class="flex items-center p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium cursor-pointer hover:bg-emerald-50">
-                            <input type="checkbox" id="log-care-fertilizer" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 mr-2">
-                            <span><i class="fa-solid fa-flask text-amber-500 mr-1"></i>肥料/活力剤</span>
-                        </label>
-                        <label class="flex items-center p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium cursor-pointer hover:bg-emerald-50">
-                            <input type="checkbox" id="log-care-prune" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 mr-2">
-                            <span><i class="fa-solid fa-scissors text-emerald-600 mr-1"></i>剪定・植替え</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">観察メモ・状態</label>
-                    <textarea id="log-notes" rows="3" placeholder="新芽が出てきた！葉のツヤが良い感じ。" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">写真URL</label>
-                    <input type="url" id="log-photo-url" placeholder="https://..." class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
-                </div>
-
-                <div class="pt-3 flex justify-end space-x-3 border-t border-slate-100">
-                    <button type="button" onclick="closeLogModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50">キャンセル</button>
-                    <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-md transition">投稿する</button>
-                </div>
-            </form>
-        </div>
+    <!-- 未ログイン状態の表示 -->
+    <div id="loginView" class="text-center py-8 space-y-4">
+      <p class="text-slate-600 text-sm">タスクを管理するにはGoogleアカウントでログインしてください。</p>
+      <button id="loginBtn" class="w-full flex items-center justify-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 font-medium py-2.5 px-4 rounded-lg shadow-sm transition">
+        <svg class="w-5 h-5" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span>Googleでログイン</span>
+      </button>
     </div>
 
-    <!-- MODAL 3: FIREBASE CONFIG SETTINGS -->
-    <div id="config-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all my-8">
-            <div class="px-6 py-4 bg-slate-800 text-white flex justify-between items-center">
-                <h3 class="font-bold text-lg flex items-center"><i class="fa-solid fa-sliders mr-2"></i>Firebase 連携設定</h3>
-                <button onclick="closeConfigModal()" class="text-white/80 hover:text-white p-1 text-xl"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="p-6 space-y-4">
-                <p class="text-xs text-slate-600 leading-relaxed">
-                    ご自身のFirebaseコンソールの「プロジェクト設定」から取得した設定情報を入力すると、本アプリがご自身のCloud Firestoreと接続されます。
-                </p>
+    <!-- ログイン後のメインコンテンツ -->
+    <div id="appView" class="hidden space-y-6">
+      <!-- タスク追加フォーム -->
+      <form id="addTaskForm" class="flex gap-2">
+        <input type="text" id="taskInput" placeholder="新しいタスクを入力..." required
+          class="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-300">
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition">追加</button>
+      </form>
 
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">apiKey</label>
-                        <input type="text" id="cfg-apiKey" placeholder="AIzaSy..." class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">authDomain</label>
-                            <input type="text" id="cfg-authDomain" placeholder="app.firebaseapp.com" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">projectId</label>
-                            <input type="text" id="cfg-projectId" placeholder="my-plant-app" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
-                    <i class="fa-solid fa-circle-info mr-1"></i>
-                    GitHub Pagesで動作させる場合は、Firebaseコンソールの [Authentication] -> [設定] -> [承認済みドメイン] にご自身のGitHub Pagesドメインを追加してください。
-                </div>
-
-                <div class="pt-3 flex justify-between items-center border-t border-slate-100">
-                    <button type="button" onclick="resetConfigToDemo()" class="text-xs font-medium text-slate-500 hover:text-rose-600 underline">デモ表示に戻す</button>
-                    <div class="flex space-x-2">
-                        <button type="button" onclick="closeConfigModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-xs font-medium text-slate-600">閉じる</button>
-                        <button type="button" onclick="saveCustomConfig()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow">設定を反映</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+      <!-- タスク一覧 -->
+      <ul id="taskList" class="space-y-2">
+        <!-- JSでタスクを生成 -->
+      </ul>
     </div>
-
-    <!-- UI Notification Toast -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
-
-    <!-- Firebase SDK Modules Script -->
-    <script type="module">
-        import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, 
-            GoogleAuthProvider, 
-            signInWithPopup, 
-            signOut, 
-            onAuthStateChanged 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            collection, 
-            doc, 
-            setDoc, 
-            addDoc, 
-            deleteDoc, 
-            onSnapshot, 
-            query, 
-            orderBy 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Global State Window Object
-        window.appState = {
-            user: null,
-            isDemo: false,
-            plants: [],
-            logs: [],
-            activeTab: 'plants',
-            firebaseApp: null,
-            auth: null,
-            db: null,
-            unsubscribePlants: null,
-            unsubscribeLogs: null,
-            chartInstance: null
-        };
-
-        // App Const identifier
-        const APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'botanical-growth-app';
-
-        // Pre-defined Preset Images
-        const DEFAULT_IMAGES = [
-            'https://images.unsplash.com/photo-1545241047-6083a3684587?auto=format&fit=crop&w=600&q=80',
-            'https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&w=600&q=80',
-            'https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=600&q=80',
-            'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?auto=format&fit=crop&w=600&q=80'
-        ];
-
-        // Initialize Firebase Connection
-        function initFirebase() {
-            let config = null;
-
-            // Check for stored custom config
-            const storedCfg = localStorage.getItem('plant_app_firebase_cfg');
-            if (storedCfg) {
-                try { config = JSON.parse(storedCfg); } catch(e){}
-            }
-
-            // Global environment fallback
-            if (!config && typeof __firebase_config !== 'undefined') {
-                try { config = JSON.parse(__firebase_config); } catch(e){}
-            }
-
-            if (config && config.apiKey && config.apiKey !== 'DEMO') {
-                try {
-                    if (!getApps().length) {
-                        window.appState.firebaseApp = initializeApp(config);
-                    }
-                    window.appState.auth = getAuth();
-                    window.appState.db = getFirestore();
-
-                    // Listen for Auth changes
-                    onAuthStateChanged(window.appState.auth, (user) => {
-                        if (user) {
-                            window.appState.user = user;
-                            window.appState.isDemo = false;
-                            updateAuthUI();
-                            setupFirestoreListeners();
-                        } else {
-                            window.appState.user = null;
-                            updateAuthUI();
-                        }
-                    });
-                    return;
-                } catch(e) {
-                    console.warn("Firebase initialize error, falling back to local mode:", e);
-                }
-            }
-
-            // Fallback: If no config exists, prompt user or allow demo mode
-            updateAuthUI();
-        }
-
-        // Google Sign In Handler
-        window.handleGoogleSignIn = async function() {
-            if (!window.appState.auth) {
-                showToast("Firebaseの設定が必要です。右上ギアから設定を行うかデモモードをご利用ください。", "error");
-                openConfigModal();
-                return;
-            }
-            try {
-                const provider = new GoogleAuthProvider();
-                await signInWithPopup(window.appState.auth, provider);
-                showToast("ログインしました！", "success");
-            } catch (error) {
-                console.error("Sign in error:", error);
-                showToast("ログイン処理に失敗しました: " + error.message, "error");
-            }
-        };
-
-        // Sign Out Handler
-        window.handleSignOut = async function() {
-            if (window.appState.auth) {
-                await signOut(window.appState.auth);
-            }
-            window.appState.user = null;
-            window.appState.isDemo = false;
-            if (window.appState.unsubscribePlants) window.appState.unsubscribePlants();
-            if (window.appState.unsubscribeLogs) window.appState.unsubscribeLogs();
-            updateAuthUI();
-            showToast("ログアウトしました", "info");
-        };
-
-        // Demo Mode Enable
-        window.enableDemoMode = function() {
-            window.appState.isDemo = true;
-            window.appState.user = {
-                uid: 'demo-user-123',
-                displayName: 'お試しガーデナー',
-                photoURL: 'https://api.dicebear.com/7.x/bottts/svg?seed=Botanist'
-            };
-
-            // Seed mock data
-            window.appState.plants = [
-                {
-                    id: 'p1',
-                    name: 'ウンベラータ',
-                    species: '観葉植物',
-                    location: '室内',
-                    startDate: '2024-04-15',
-                    waterInterval: 4,
-                    lastWatered: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
-                    lastFertilizer: new Date(Date.now() - 86400000 * 10).toISOString().split('T')[0],
-                    imageUrl: DEFAULT_IMAGES[0],
-                    memo: 'リビングの日当たりの良い窓辺。葉水も毎日欠かさずに実施。'
-                },
-                {
-                    id: 'p2',
-                    name: 'ミニトマト (アイコ)',
-                    species: '野菜・果菜類',
-                    location: 'ベランダ',
-                    startDate: '2024-05-01',
-                    waterInterval: 1,
-                    lastWatered: new Date().toISOString().split('T')[0],
-                    lastFertilizer: new Date(Date.now() - 86400000 * 5).toISOString().split('T')[0],
-                    imageUrl: DEFAULT_IMAGES[1],
-                    memo: '追肥は2週間に1回。わき芽かきをこまめに行う。'
-                }
-            ];
-
-            window.appState.logs = [
-                {
-                    id: 'l1',
-                    plantId: 'p1',
-                    date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
-                    height: 42.5,
-                    watered: true,
-                    fertilizer: false,
-                    pruning: false,
-                    notes: '新しいかわいい葉っぱが開いてきました！色艶もとても健やかです。',
-                    photoUrl: DEFAULT_IMAGES[2]
-                },
-                {
-                    id: 'l2',
-                    plantId: 'p2',
-                    date: new Date().toISOString().split('T')[0],
-                    height: 28.0,
-                    watered: true,
-                    fertilizer: true,
-                    pruning: true,
-                    notes: '第一花房に黄色い小さな花が咲きました。楽しみ！',
-                    photoUrl: DEFAULT_IMAGES[3]
-                }
-            ];
-
-            updateAuthUI();
-            renderAllViews();
-            showToast("デモモードで起動しました（データはブラウザ内に保存されます）", "info");
-        };
-
-        // Setup Firestore Realtime Collections
-        function setupFirestoreListeners() {
-            if (!window.appState.user || window.appState.isDemo) return;
-
-            const userId = window.appState.user.uid;
-            
-            // Mandatory Rule Path for User Private Data
-            const plantsCollRef = collection(window.appState.db, 'artifacts', APP_ID, 'users', userId, 'plants');
-            const logsCollRef = collection(window.appState.db, 'artifacts', APP_ID, 'users', userId, 'logs');
-
-            // Unsubscribe existing listeners
-            if (window.appState.unsubscribePlants) window.appState.unsubscribePlants();
-            if (window.appState.unsubscribeLogs) window.appState.unsubscribeLogs();
-
-            // Plants Collection Listener
-            window.appState.unsubscribePlants = onSnapshot(plantsCollRef, (snapshot) => {
-                const list = [];
-                snapshot.forEach((doc) => {
-                    list.push({ id: doc.id, ...doc.data() });
-                });
-                window.appState.plants = list;
-                renderAllViews();
-            }, (error) => {
-                console.error("Firestore Plants Error:", error);
-                showToast("データ同期エラーが発生しました", "error");
-            });
-
-            // Logs Collection Listener
-            window.appState.unsubscribeLogs = onSnapshot(logsCollRef, (snapshot) => {
-                const list = [];
-                snapshot.forEach((doc) => {
-                    list.push({ id: doc.id, ...doc.data() });
-                });
-                // Client-side Sort by Date Descending
-                list.sort((a, b) => new Date(b.date) - new Date(a.date));
-                window.appState.logs = list;
-                renderAllViews();
-            }, (error) => {
-                console.error("Firestore Logs Error:", error);
-            });
-        }
-
-        // Render Views Switch
-        function updateAuthUI() {
-            const authHeader = document.getElementById('auth-header-container');
-            const welcomeView = document.getElementById('welcome-view');
-            const dashboardView = document.getElementById('app-dashboard-view');
-
-            if (window.appState.user) {
-                welcomeView.classList.add('hidden');
-                dashboardView.classList.remove('hidden');
-
-                const user = window.appState.user;
-                authHeader.innerHTML = `
-                    <div class="flex items-center space-x-3">
-                        <img src="${user.photoURL || 'https://api.dicebear.com/7.x/bottts/svg?seed=User'}" class="w-8 h-8 rounded-full border border-emerald-300" alt="avatar">
-                        <span class="text-xs font-semibold text-slate-700 hidden sm:inline">${escapeHTML(user.displayName || 'ユーザー')}</span>
-                        <button onclick="handleSignOut()" title="ログアウト" class="text-xs text-slate-500 hover:text-rose-600 p-1 bg-slate-100 rounded-lg">
-                            <i class="fa-solid fa-right-from-bracket"></i>
-                        </button>
-                    </div>
-                `;
-            } else {
-                welcomeView.classList.remove('hidden');
-                dashboardView.classList.add('hidden');
-                authHeader.innerHTML = `
-                    <button onclick="handleGoogleSignIn()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition">
-                        Googleログイン
-                    </button>
-                `;
-            }
-        }
-
-        window.renderAllViews = function() {
-            renderPlants();
-            renderTimeline();
-            renderSchedule();
-            updateSelectOptions();
-        };
-
-        // Render Plant Cards
-        window.renderPlants = function() {
-            const grid = document.getElementById('plants-grid');
-            const emptyState = document.getElementById('plants-empty-state');
-            const searchVal = (document.getElementById('plant-search-input')?.value || '').toLowerCase();
-            const locationVal = document.getElementById('plant-location-filter')?.value || 'ALL';
-
-            let filtered = window.appState.plants.filter(p => {
-                const matchSearch = p.name.toLowerCase().includes(searchVal) || (p.species && p.species.toLowerCase().includes(searchVal));
-                const matchLocation = locationVal === 'ALL' || p.location === locationVal;
-                return matchSearch && matchLocation;
-            });
-
-            document.getElementById('badge-plant-count').textContent = window.appState.plants.length;
-
-            if (filtered.length === 0) {
-                grid.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                return;
-            }
-
-            emptyState.classList.add('hidden');
-            grid.innerHTML = filtered.map(plant => {
-                const daysDiff = Math.max(0, Math.floor((new Date() - new Date(plant.startDate)) / (1000 * 60 * 60 * 24)));
-                const coverImg = plant.imageUrl || DEFAULT_IMAGES[Math.abs(hashCode(plant.id)) % DEFAULT_IMAGES.length];
-                
-                // Days since last water
-                let waterBadge = '<span class="text-xs text-slate-400">記録なし</span>';
-                if (plant.lastWatered) {
-                    const daysAgo = Math.floor((new Date() - new Date(plant.lastWatered)) / (1000 * 60 * 60 * 24));
-                    if (daysAgo === 0) waterBadge = '<span class="text-xs font-semibold text-emerald-600">本日給水済み</span>';
-                    else waterBadge = `<span class="text-xs font-medium text-slate-600">${daysAgo}日前に水やり</span>`;
-                }
-
-                return `
-                    <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col group">
-                        <div class="relative h-44 w-full bg-slate-100 overflow-hidden">
-                            <img src="${coverImg}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" alt="${escapeHTML(plant.name)}" onerror="this.src='${DEFAULT_IMAGES[0]}'">
-                            <div class="absolute top-3 left-3 bg-slate-900/60 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-1 rounded-full">
-                                <i class="fa-solid fa-location-dot mr-1"></i>${escapeHTML(plant.location || '室内')}
-                            </div>
-                            <div class="absolute top-3 right-3 flex space-x-1">
-                                <button onclick="openPlantModal('${plant.id}')" class="w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-700 flex items-center justify-center text-xs backdrop-blur-sm shadow transition">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
-                                <button onclick="deletePlant('${plant.id}')" class="w-8 h-8 rounded-full bg-white/80 hover:bg-rose-500 hover:text-white text-slate-700 flex items-center justify-center text-xs backdrop-blur-sm shadow transition">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="p-5 flex-1 flex flex-col justify-between">
-                            <div>
-                                <div class="flex justify-between items-start mb-1">
-                                    <h3 class="font-bold text-slate-800 text-lg leading-tight">${escapeHTML(plant.name)}</h3>
-                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
-                                        栽培${daysDiff}日目
-                                    </span>
-                                </div>
-                                <p class="text-xs text-slate-500 mb-3">${escapeHTML(plant.species || '品種未登録')}</p>
-                                ${plant.memo ? `<p class="text-xs text-slate-600 line-clamp-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3">${escapeHTML(plant.memo)}</p>` : ''}
-                            </div>
-
-                            <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
-                                <div class="flex items-center space-x-1.5">
-                                    <i class="fa-solid fa-droplet text-blue-500 text-xs"></i>
-                                    ${waterBadge}
-                                </div>
-                                <button onclick="quickWater('${plant.id}')" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-xl transition flex items-center">
-                                    <i class="fa-solid fa-plus mr-1"></i>水やり記録
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        };
-
-        // Render Timeline
-        window.renderTimeline = function() {
-            const timelineList = document.getElementById('timeline-list');
-            const emptyState = document.getElementById('timeline-empty-state');
-            const filterPlantId = document.getElementById('timeline-plant-filter')?.value || 'ALL';
-
-            let filteredLogs = window.appState.logs;
-            if (filterPlantId !== 'ALL') {
-                filteredLogs = filteredLogs.filter(l => l.plantId === filterPlantId);
-            }
-
-            if (filteredLogs.length === 0) {
-                timelineList.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                updateChart([]);
-                return;
-            }
-
-            emptyState.classList.add('hidden');
-            timelineList.innerHTML = filteredLogs.map(log => {
-                const plant = window.appState.plants.find(p => p.id === log.plantId);
-                const plantName = plant ? plant.name : '削除された植物';
-
-                return `
-                    <div class="relative group">
-                        <!-- Dot on vertical line -->
-                        <div class="absolute -left-[31px] sm:-left-[39px] top-1.5 w-4 h-4 rounded-full bg-emerald-600 ring-4 ring-emerald-100"></div>
-
-                        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow transition">
-                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
-                                <div class="flex items-center space-x-2">
-                                    <span class="font-bold text-slate-800 text-sm">${escapeHTML(plantName)}</span>
-                                    <span class="text-xs text-slate-400">• ${log.date}</span>
-                                </div>
-                                <button onclick="deleteLog('${log.id}')" class="text-xs text-slate-400 hover:text-rose-500 self-end sm:self-auto">
-                                    <i class="fa-solid fa-trash"></i> 削除
-                                </button>
-                            </div>
-
-                            <!-- Tags for cares performed -->
-                            <div class="flex flex-wrap gap-1.5 mb-3">
-                                ${log.watered ? '<span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md text-[11px] font-medium"><i class="fa-solid fa-droplet mr-1"></i>水やり</span>' : ''}
-                                ${log.fertilizer ? '<span class="px-2 py-0.5 bg-amber-50 text-amber-700 rounded-md text-[11px] font-medium"><i class="fa-solid fa-flask mr-1"></i>肥料</span>' : ''}
-                                ${log.pruning ? '<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[11px] font-medium"><i class="fa-solid fa-scissors mr-1"></i>手入れ/剪定</span>' : ''}
-                                ${log.height ? `<span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md text-[11px] font-medium"><i class="fa-solid fa-ruler-vertical mr-1"></i>草丈 ${log.height}cm</span>` : ''}
-                            </div>
-
-                            ${log.notes ? `<p class="text-xs text-slate-700 whitespace-pre-line mb-3 leading-relaxed">${escapeHTML(log.notes)}</p>` : ''}
-
-                            ${log.photoUrl ? `
-                                <div class="mt-2 rounded-xl overflow-hidden max-h-64 max-w-sm border border-slate-100">
-                                    <img src="${log.photoUrl}" class="w-full h-full object-cover" alt="観察写真" onerror="this.style.display='none'">
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            updateChart(filteredLogs);
-        };
-
-        // Growth Chart Update Logic
-        function updateChart(logs) {
-            const ctx = document.getElementById('growthChart')?.getContext('2d');
-            if (!ctx) return;
-
-            // Logs with height data
-            const heightLogs = [...logs].filter(l => l.height).sort((a,b) => new Date(a.date) - new Date(b.date));
-
-            if (window.appState.chartInstance) {
-                window.appState.chartInstance.destroy();
-            }
-
-            window.appState.chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: heightLogs.map(l => l.date),
-                    datasets: [{
-                        label: '草丈 (cm)',
-                        data: heightLogs.map(l => parseFloat(l.height)),
-                        borderColor: '#059669',
-                        backgroundColor: 'rgba(5, 150, 105, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#047857'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: false, grid: { color: '#f1f5f9' } },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
-        }
-
-        // Render Reminders / Schedule Tab
-        window.renderSchedule = function() {
-            const grid = document.getElementById('schedule-cards-grid');
-            if (window.appState.plants.length === 0) {
-                grid.innerHTML = '<p class="col-span-full text-center text-slate-400 text-sm py-12">登録済みの植物がありません。</p>';
-                return;
-            }
-
-            grid.innerHTML = window.appState.plants.map(p => {
-                const interval = p.waterInterval || 3;
-                let daysSinceWater = 999;
-                if (p.lastWatered) {
-                    daysSinceWater = Math.floor((new Date() - new Date(p.lastWatered)) / (1000 * 60 * 60 * 24));
-                }
-
-                const isUrgent = daysSinceWater >= interval;
-                const statusColor = isUrgent ? 'border-rose-200 bg-rose-50/30' : 'border-slate-200 bg-white';
-
-                return `
-                    <div class="p-5 rounded-2xl border ${statusColor} shadow-sm flex items-center justify-between">
-                        <div>
-                            <h4 class="font-bold text-slate-800 text-sm">${escapeHTML(p.name)}</h4>
-                            <p class="text-xs text-slate-500 mt-0.5">目安: ${interval}日に1回</p>
-                            <div class="mt-2 text-xs">
-                                ${isUrgent ? 
-                                    `<span class="text-rose-600 font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>水やりを推奨 (${daysSinceWater === 999 ? '未実施' : daysSinceWater + '日経過'})</span>` : 
-                                    `<span class="text-emerald-600 font-medium"><i class="fa-solid fa-circle-check mr-1"></i>良好 (前回: ${daysSinceWater}日前)</span>`}
-                            </div>
-                        </div>
-                        <button onclick="quickWater('${p.id}')" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow transition">
-                            <i class="fa-solid fa-droplet mr-1"></i>あげる
-                        </button>
-                    </div>
-                `;
-            }).join('');
-        };
-
-        // Water Action Quick Log
-        window.quickWater = async function(plantId) {
-            const today = new Date().toISOString().split('T')[0];
-            const plant = window.appState.plants.find(p => p.id === plantId);
-            if (!plant) return;
-
-            plant.lastWatered = today;
-
-            const newLog = {
-                plantId: plantId,
-                date: today,
-                watered: true,
-                fertilizer: false,
-                pruning: false,
-                notes: '水やりを実施しました。'
-            };
-
-            if (window.appState.isDemo) {
-                window.appState.logs.unshift({ id: 'l_' + Date.now(), ...newLog });
-                renderAllViews();
-                showToast(`${plant.name} に水やりを記録しました`, "success");
-            } else if (window.appState.user) {
-                const userId = window.appState.user.uid;
-                await setDoc(doc(window.appState.db, 'artifacts', APP_ID, 'users', userId, 'plants', plantId), { lastWatered: today }, { merge: true });
-                await addDoc(collection(window.appState.db, 'artifacts', APP_ID, 'users', userId, 'logs'), newLog);
-                showToast(`${plant.name} に水やりを記録しました`, "success");
-            }
-        };
-
-        // Select Options Update
-        function updateSelectOptions() {
-            const selectLogPlant = document.getElementById('log-plant-id');
-            const selectFilterPlant = document.getElementById('timeline-plant-filter');
-
-            if (!selectLogPlant) return;
-
-            const optionsHTML = window.appState.plants.map(p => `<option value="${p.id}">${escapeHTML(p.name)}</option>`).join('');
-            selectLogPlant.innerHTML = optionsHTML || '<option value="">植物を先に登録してください</option>';
-
-            if (selectFilterPlant) {
-                const currentVal = selectFilterPlant.value;
-                selectFilterPlant.innerHTML = '<option value="ALL">すべての植物のログ</option>' + optionsHTML;
-                selectFilterPlant.value = currentVal;
-            }
-        }
-
-        // Tab Switching
-        window.switchTab = function(tabName) {
-            window.appState.activeTab = tabName;
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('bg-white', 'text-emerald-800', 'shadow-sm');
-                btn.classList.add('text-slate-600');
-            });
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
-
-            const activeBtn = document.getElementById(`tab-btn-${tabName}`);
-            const activeContent = document.getElementById(`tab-content-${tabName}`);
-
-            if (activeBtn) {
-                activeBtn.classList.add('bg-white', 'text-emerald-800', 'shadow-sm');
-                activeBtn.classList.remove('text-slate-600');
-            }
-            if (activeContent) {
-                activeContent.classList.remove('hidden');
-            }
-
-            if (tabName === 'timeline') renderTimeline();
-            if (tabName === 'schedule') renderSchedule();
-        };
-
-        // Plant Modal Operations
-        window.openPlantModal = function(plantId = null) {
-            const modal = document.getElementById('plant-modal');
-            const form = document.getElementById('plant-form');
-            form.reset();
-
-            if (plantId) {
-                const p = window.appState.plants.find(x => x.id === plantId);
-                if (p) {
-                    document.getElementById('plant-modal-title').textContent = '植物情報を編集';
-                    document.getElementById('plant-id-input').value = p.id;
-                    document.getElementById('plant-name').value = p.name;
-                    document.getElementById('plant-species').value = p.species || '';
-                    document.getElementById('plant-location').value = p.location || '室内';
-                    document.getElementById('plant-start-date').value = p.startDate || new Date().toISOString().split('T')[0];
-                    document.getElementById('plant-water-interval').value = p.waterInterval || 3;
-                    document.getElementById('plant-image-url').value = p.imageUrl || '';
-                    document.getElementById('plant-memo').value = p.memo || '';
-                }
-            } else {
-                document.getElementById('plant-modal-title').textContent = '新しい植物を登録';
-                document.getElementById('plant-id-input').value = '';
-                document.getElementById('plant-start-date').value = new Date().toISOString().split('T')[0];
-            }
-
-            modal.classList.remove('hidden');
-        };
-
-        window.closePlantModal = function() {
-            document.getElementById('plant-modal').classList.add('hidden');
-        };
-
-        window.savePlant = async function(e) {
-            e.preventDefault();
-            const id = document.getElementById('plant-id-input').value;
-            const plantData = {
-                name: document.getElementById('plant-name').value,
-                species: document.getElementById('plant-species').value,
-                location: document.getElementById('plant-location').value,
-                startDate: document.getElementById('plant-start-date').value,
-                waterInterval: parseInt(document.getElementById('plant-water-interval').value) || 3,
-                imageUrl: document.getElementById('plant-image-url').value,
-                memo: document.getElementById('plant-memo').value
-            };
-
-            if (window.appState.isDemo) {
-                if (id) {
-                    const idx = window.appState.plants.findIndex(p => p.id === id);
-                    if (idx !== -1) window.appState.plants[idx] = { ...window.appState.plants[idx], ...plantData };
-                } else {
-                    window.appState.plants.unshift({ id: 'p_' + Date.now(), ...plantData });
-                }
-                closePlantModal();
-                renderAllViews();
-                showToast("保存しました（デモ）", "success");
-            } else if (window.appState.user) {
-                const userId = window.appState.user.uid;
-                if (id) {
-                    await setDoc(doc(window.appState.db, 'artifacts', APP_ID, 'users', userId, 'plants', id), plantData, { merge: true });
-                } else {
-                    await addDoc(collection(window.appState.db, 'artifacts', APP_ID, 'users', userId, 'plants'), plantData);
-                }
-                closePlantModal();
-                showToast("植物情報を保存しました", "success");
-            }
-        };
-
-        window.deletePlant = async function(plantId) {
-            if (!window.appState.isDemo && !window.appState.user) return;
-            
-            // Custom Modal alternative for delete safety
-            if (window.appState.isDemo) {
-                window.appState.plants = window.appState.plants.filter(p => p.id !== plantId);
-                renderAllViews();
-                showToast("削除しました", "info");
-            } else {
-                const userId = window.appState.user.uid;
-                await deleteDoc(doc(window.appState.db, 'artifacts', APP_ID, 'users', userId, 'plants', plantId));
-                showToast("削除しました", "info");
-            }
-        };
-
-        // Log Modal Operations
-        window.openLogModal = function() {
-            if (window.appState.plants.length === 0) {
-                showToast("先に植物を登録してください", "error");
-                openPlantModal();
-                return;
-            }
-            const modal = document.getElementById('log-modal');
-            const form = document.getElementById('log-form');
-            form.reset();
-            document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
-            modal.classList.remove('hidden');
-        };
-
-        window.closeLogModal = function() {
-            document.getElementById('log-modal').classList.add('hidden');
-        };
-
-        window.saveLog = async function(e) {
-            e.preventDefault();
-            const plantId = document.getElementById('log-plant-id').value;
-            const date = document.getElementById('log-date').value;
-            const watered = document.getElementById('log-care-water').checked;
-
-            const logData = {
-                plantId,
-                date,
-                height: document.getElementById('log-height').value || null,
-                watered,
-                fertilizer: document.getElementById('log-care-fertilizer').checked,
-                pruning: document.getElementById('log-care-prune').checked,
-                notes: document.getElementById('log-notes').value,
-                photoUrl: document.getElementById('log-photo-url').value
-            };
-
-            if (window.appState.isDemo) {
-                window.appState.logs.unshift({ id: 'l_' + Date.now(), ...logData });
-                if (watered) {
-                    const p = window.appState.plants.find(x => x.id === plantId);
-                    if (p) p.lastWatered = date;
-                }
-                closeLogModal();
-                renderAllViews();
-                showToast("観察ログを投稿しました", "success");
-            } else if (window.appState.user) {
-                const userId = window.appState.user.uid;
-                await addDoc(collection(window.appState.db, 'artifacts', APP_ID, 'users', userId, 'logs'), logData);
-                if (watered) {
-                    await setDoc(doc(window.appState.db, 'artifacts', APP_ID, 'users', userId, 'plants', plantId), { lastWatered: date }, { merge: true });
-                }
-                closeLogModal();
-                showToast("観察ログを投稿しました", "success");
-            }
-        };
-
-        window.deleteLog = async function(logId) {
-            if (window.appState.isDemo) {
-                window.appState.logs = window.appState.logs.filter(l => l.id !== logId);
-                renderAllViews();
-                showToast("ログを削除しました", "info");
-            } else if (window.appState.user) {
-                const userId = window.appState.user.uid;
-                await deleteDoc(doc(window.appState.db, 'artifacts', APP_ID, 'users', userId, 'logs', logId));
-                showToast("ログを削除しました", "info");
-            }
-        };
-
-        // Firebase Config Modal Controls
-        window.openConfigModal = function() {
-            document.getElementById('config-modal').classList.remove('hidden');
-        };
-        window.closeConfigModal = function() {
-            document.getElementById('config-modal').classList.add('hidden');
-        };
-        window.saveCustomConfig = function() {
-            const cfg = {
-                apiKey: document.getElementById('cfg-apiKey').value.trim(),
-                authDomain: document.getElementById('cfg-authDomain').value.trim(),
-                projectId: document.getElementById('cfg-projectId').value.trim()
-            };
-            if (!cfg.apiKey) {
-                showToast("apiKey: "AIzaSyBy-EKY6oj7N4-nYe5t8L2WpOPPUnWx84Y",
+  </div>
+
+  <!-- Firebase JavaScript SDK (Modular v10) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithPopup, 
+      GoogleAuthProvider, 
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      addDoc, 
+      query, 
+      where, 
+      onSnapshot, 
+      doc, 
+      updateDoc, 
+      deleteDoc, 
+      serverTimestamp,
+      orderBy 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // 1. Firebaseプロジェクト設定（Consoleから取得した値に置き換えてください）
+    const firebaseConfig = {
+     apiKey: "AIzaSyBy-EKY6oj7N4-nYe5t8L2WpOPPUnWx84Y",
   authDomain: "tamesi-67271.firebaseapp.com",
   projectId: "tamesi-67271",
   storageBucket: "tamesi-67271.firebasestorage.app",
   messagingSenderId: "844114418972",
-  appId: "1:844114418972:web:4fe2f9080abcfc14b8eed9", 
-                    "error");
-                return;
-            }
-            localStorage.setItem('plant_app_firebase_cfg', JSON.stringify(cfg));
-            showToast("設定を保存しました。再読み込みします...", "success");
-            setTimeout(() => location.reload(), 1000);
-        };
-        window.resetConfigToDemo = function() {
-            localStorage.removeItem('plant_app_firebase_cfg');
-            location.reload();
-        };
+  appId: "1:844114418972:web:4fe2f9080abcfc14b8eed9"
+    };
 
-        // Helpers
-        function showToast(message, type = "info") {
-            const container = document.getElementById('toast-container');
-            if (!container) return;
-            const toast = document.createElement('div');
-            
-            const bg = type === 'error' ? 'bg-rose-600' : type === 'success' ? 'bg-emerald-600' : 'bg-slate-800';
-            toast.className = `${bg} text-white text-xs font-medium px-4 py-3 rounded-2xl shadow-lg pointer-events-auto flex items-center space-x-2 animate-fade-in`;
-            toast.innerHTML = `<span>${escapeHTML(message)}</span>`;
-            
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'transition', 'duration-300');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
+    // Firebase 初期化
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
 
-        function escapeHTML(str) {
-            if (!str) return '';
-            return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-            );
-        }
+    // DOM 要素
+    const loginView = document.getElementById('loginView');
+    const appView = document.getElementById('appView');
+    const userInfo = document.getElementById('userInfo');
+    const userAvatar = document.getElementById('userAvatar');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const addTaskForm = document.getElementById('addTaskForm');
+    const taskInput = document.getElementById('taskInput');
+    const taskList = document.getElementById('taskList');
 
-        function hashCode(str) {
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                hash = (hash << 5) - hash + str.charCodeAt(i);
-                hash |= 0;
-            }
-            return hash;
-        }
+    let currentUser = null;
+    let unsubscribeSnapshot = null;
 
-        // Initialize on Load
-        window.addEventListener('DOMContentLoaded', () => {
-            initFirebase();
+    // 2. 認証状態の監視
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        userAvatar.src = user.photoURL || 'https://via.placeholder.com/32';
+        loginView.classList.add('hidden');
+        appView.classList.remove('hidden');
+        userInfo.classList.remove('hidden');
+        
+        // タスクのリアルタイム監視を開始
+        subscribeTasks();
+      } else {
+        currentUser = null;
+        if (unsubscribeSnapshot) unsubscribeSnapshot();
+        loginView.classList.remove('hidden');
+        appView.classList.add('hidden');
+        userInfo.classList.add('hidden');
+        taskList.innerHTML = '';
+      }
+    });
+
+    // ログイン・ログアウト処理
+    loginBtn.addEventListener('click', () => signInWithPopup(auth, provider));
+    logoutBtn.addEventListener('click', () => signOut(auth));
+
+    // 3. タスク追加
+    addTaskForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = taskInput.value.trim();
+      if (!text || !currentUser) return;
+
+      try {
+        await addDoc(collection(db, 'tasks'), {
+          text: text,
+          completed: false,
+          userId: currentUser.uid,
+          createdAt: serverTimestamp()
         });
-    </script>
+        taskInput.value = '';
+      } catch (error) {
+        console.error("タスク追加エラー:", error);
+      }
+    });
+
+    // 4. 自分のタスク取得（リアルタイム）
+    function subscribeTasks() {
+      const q = query(
+        collection(db, 'tasks'),
+        where('userId', '==', currentUser.uid),
+        orderBy('createdAt', 'desc')
+      );
+
+      unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+        taskList.innerHTML = '';
+        if (snapshot.empty) {
+          taskList.innerHTML = '<li class="text-center text-slate-400 text-sm py-4">タスクはありません</li>';
+          return;
+        }
+
+        snapshot.forEach((docSnap) => {
+          const task = docSnap.data();
+          const taskId = docSnap.id;
+          renderTask(taskId, task);
+        });
+      });
+    }
+
+    // タスク描画
+    function renderTask(id, task) {
+      const li = document.createElement('li');
+      li.className = 'flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200';
+
+      li.innerHTML = `
+        <div class="flex items-center gap-3 overflow-hidden">
+          <input type="checkbox" ${task.completed ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer toggle-complete">
+          <span class="truncate ${task.completed ? 'line-through text-slate-400' : 'text-slate-700'}">${escapeHtml(task.text)}</span>
+        </div>
+        <button class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition delete-btn">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        </button>
+      `;
+
+      // 完了フラグ切替
+      li.querySelector('.toggle-complete').addEventListener('change', async (e) => {
+        await updateDoc(doc(db, 'tasks', id), {
+          completed: e.target.checked
+        });
+      });
+
+      // 削除
+      li.querySelector('.delete-btn').addEventListener('click', async () => {
+        await deleteDoc(doc(db, 'tasks', id));
+      });
+
+      taskList.appendChild(li);
+    }
+
+    // XSS対策用エスケープ関数
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, (match) => {
+        const escapeMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+        return escapeMap[match];
+      });
+    }
+  </script>
 </body>
 </html>
