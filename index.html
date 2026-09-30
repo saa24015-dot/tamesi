@@ -1169,7 +1169,13 @@
                 projectId: document.getElementById('cfg-projectId').value.trim()
             };
             if (!cfg.apiKey) {
-                showToast("apiKeyを入力してください", "error");
+                showToast("apiKey: "AIzaSyBy-EKY6oj7N4-nYe5t8L2WpOPPUnWx84Y",
+  authDomain: "tamesi-67271.firebaseapp.com",
+  projectId: "tamesi-67271",
+  storageBucket: "tamesi-67271.firebasestorage.app",
+  messagingSenderId: "844114418972",
+  appId: "1:844114418972:web:4fe2f9080abcfc14b8eed9", 
+                    "error");
                 return;
             }
             localStorage.setItem('plant_app_firebase_cfg', JSON.stringify(cfg));
